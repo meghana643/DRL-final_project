@@ -1,376 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cooperative Multi-Agent RL in Level-Based Foraging (MAPPO)</title>
+</head>
+<body>
 
-<h1>Multi-Agent Reinforcement Learning:
-Foundations and Modern Approaches</h1>
-  
-<h2>
-  Book Codebase: www.marl-book.com
-</h2>
+  <h1>Cooperative Multi-Agent RL in Level-Based Foraging (MAPPO)</h1>
 
-Cite the book using:
-```latex
-@book{marl-book,
+  <p>
+    This project builds on the codebase from the book:
+  </p>
+
+  <blockquote>
+    <strong>Stefano V. Albrecht, Filippos Christianos, Lukas Schäfer</strong><br />
+    <em>Multi-Agent Reinforcement Learning: Foundations and Modern Approaches</em>, MIT Press, 2024.<br />
+    Code: <a href="https://www.marl-book.com" target="_blank" rel="noopener noreferrer">https://www.marl-book.com</a>
+  </blockquote>
+
+  <p>
+    If you use this codebase in academic work, please cite:
+  </p>
+
+  <pre><code>@book{marl-book,
     author = {Stefano V. Albrecht and Filippos Christianos and Lukas Sch\"afer},
     title = {Multi-Agent Reinforcement Learning: Foundations and Modern Approaches},
     publisher = {MIT Press},
     year = {2024},
     url = {https://www.marl-book.com}
 }
-```
+  </code></pre>
 
-This codebase is part of the [MARL book](http://www.marl-book.com) and provides access to basic and easy-to-understand MARL ideas. 
-The algorithms are self-contained and the implementations are focusing on simplicity.
-Implementation tricks, while necessary for some algorithms, are sparse as not to make the code very complicated. As a result, some performance has been sacrificed.
+  <p>
+    This repository uses the MARL-book codebase (<code>marlbase</code>) to train MAPPO agents on the
+    <strong>Level-Based Foraging (LBF)</strong> environment with:
+  </p>
 
-All algorithms are implemented in [_PyTorch_](https://pytorch.org/) and use the [_Gymnasium_](https://gymnasium.farama.org/) interface.
+  <ul>
+    <li>10×10 grid, 3 players, 4 food items (<code>Foraging-10x10-3p-4f-v3</code>)</li>
+    <li>Different <strong>field-of-view (FOV / sight)</strong> settings</li>
+    <li>Different numbers of <strong>obstacle cells</strong></li>
+    <li>Different <strong>player capability levels</strong> (max player level)</li>
+  </ul>
 
-<h1>Table of Contents</h1>
+  <hr />
 
-- [Getting Started](#getting-started)
-  - [Installation](#installation)
-  - [Running an algorithm](#running-an-algorithm)
-    - [(Optional) Use Hydra's tab completion](#optional-use-hydras-tab-completion)
-  - [Running a hyperparameter search](#running-a-hyperparameter-search)
-    - [An advanced hyperparameter search using `search.py`](#an-advanced-hyperparameter-search-using-searchpy)
-  - [Logging](#logging)
-    - [File System Logger](#file-system-logger)
-    - [WandB Logger](#wandb-logger)
-- [Implementing your own algorithm/ideas](#implementing-your-own-algorithmideas)
-- [Interpreting your results](#interpreting-your-results)
-- [Implemented Algorithms](#implemented-algorithms)
-  - [Parameter Sharing](#parameter-sharing)
-  - [Value Decomposition](#value-decomposition)
-- [Contact](#contact)
+  <h2>1. Installation</h2>
 
+  <p>We recommend using a Conda environment:</p>
 
-# Getting Started
-
-## Installation
-
-We *strongly* suggest you use a virtual environment for the instructions below. A good starting point is [Miniconda](https://docs.conda.io/en/latest/miniconda.html), with which you would do:
-
-```sh
-conda create -n marlbase python=3.10
+  <pre><code>conda create -n marlbase python=3.10
 conda activate marlbase
-```
+  </code></pre>
 
-Then, clone and install the repository using: 
+  <p>Clone and install the marl-book codebase:</p>
 
-```sh
-git clone https://github.com/marl-book/codebase.git
+  <pre><code>git clone https://github.com/marl-book/codebase.git
 cd codebase
 pip install -r requirements.txt
 pip install -e .
-```
-Do not forget to install PyTorch in your environment. Instructions for your system/setup can be found here: https://pytorch.org/get-started/locally/
-
-## Running an algorithm
-This project uses [Hydra](https://hydra.cc/) to structure its configuration. Algorithm implementations can be found under `marlbase/`. The respective configs are found in `marlbase/configs/algorithms/`.
-
-You would first need an environment that is registered in Gymnasium. This repository uses the Gymnasium API (with the only difference being that the rewards are a tuple or list - one for each agent). 
-
-A good starting point would be [Level-based Foraging](https://github.com/uoe-agents/lb-foraging) and [RWARE](https://github.com/uoe-agents/robotic-warehouse). You can install both using:
-```sh
-pip install -U lbforaging rware
-```
-
-Then, running an algorithm (e.g. IA2C) looks like:
-
-```sh
-cd marlbase
-python run.py +algorithm=ia2c env.name="lbforaging:Foraging-8x8-2p-3f-v3" env.time_limit=25
-```
-
-Similarly, running IDQN can be done using:
-```sh
-python run.py +algorithm=idqn env.name="lbforaging:Foraging-8x8-2p-3f-v3" env.time_limit=25
-```
-
-Overriding hyperparameters is easy and can be done in the command line. An example of overriding the `batch_size` in IDQN:
-```sh
-python run.py +algorithm=idqn env.name="lbforaging:Foraging-8x8-2p-3f-v3" env.time_limit=25 algorithm.batch_size=256
-```
-
-Find other hyperparameters in the files under `marlbase/configs/algorithm`.
-
-### (Optional) Use Hydra's tab completion
-Hydra also supports tab completion for filling in the hyperparameters. See [here](https://hydra.cc/docs/tutorials/basic/running_your_app/tab_completion), and install it with:
-```sh
-eval "$(python run.py -sc install=bash)"
-```
-## Running a hyperparameter search
-
-Can be easily done using [Hydra's multirun](https://hydra.cc/docs/tutorials/basic/running_your_app/multi-run) option. An example of sweeping over batch sizes is:
-
-```sh
-python run.py -m +algorithm=idqn env.name="lbforaging:Foraging-8x8-2p-3f-v3" env.time_limit=25 algorithm.batch_size=32,64,128
-```
-
-### An advanced hyperparameter search using `search.py`
-*This section might get deprecated in the future if Hydra implements this feature.*
-
-We include a script named `search.py` which reads a search configuration file (e.g. the included `configs/sweeps/sample.yaml`) and runs a hyperparameter search in one or more tasks. The script can be run using
-```sh
-python search.py run --config configs/sweeps/sample.yaml --seeds 5 locally
-```
-In a cluster environment where one run should go to a single process, it can also be called in a batch script like:
-```sh
-python search.py run --config configs/sweeps/sample.yaml --seeds 5 single $TASK_ID
-```
-Where `$TASK_ID` is an index for the experiment (i.e. 1...#number of experiments).
-
-## Logging
-We implement two loggers: FileSystem Logger and WandB Logger.
-
-### File System Logger
-The default logger is the FileSystemLogger which saves experiment results in a `results.csv` file. You can find that file, the configuration that has been used & more under `outputs/{env_name}/{alg_name}/{random_hash}` or `multirun/{date}/{time}/{experiment_id}` for multiruns.
-### WandB Logger
-By appending `+logger=wandb` in the command line you can get support for WandB. Do not forget to `wandb login` first.
-
-Example:
-
-```sh
-python run.py +algorithm=idqn env.name="lbforaging:Foraging-8x8-2p-3f-v3" env.time_limit=25 logger=wandb
-```
-You can override the project name using:
-
-```sh
-python run.py +algorithm=idqn env.name="lbforaging:Foraging-8x8-2p-3f-v3" env.time_limit=25 logger=wandb logger.project_name="my-project-name"
-```
-
-# Implementing your own algorithm/ideas
-
-The fastest way would be to create a new folder starting from the algorithm of your choice e.g.
-```sh
-cp -R ac ac_new_idea
-```
-and create a new configuration file:
-```sh
-cp configs/algorithm/ia2c.yaml configs/algorithm/ac_new_idea.yaml
-```
-
-with the editor of your choice, open `ac_new_idea.yaml` and change
-```yaml
-...
-algorithm:
-  _target_: ac.train.main
-  name: "ac"
-  model:
-    _target_: ac.model.A2CNetwork
-...
-```
-to 
-```yaml
-...
-algorithm:
-  _target_: ac_new_idea.train.main
-  name: "ac_new_idea"
-  model:
-    _target_: ac_new_idea.model.NewNetwork
-...
-```
-Make any changes you want to the files under `ac_new_idea/` and run it using:
-
-```sh
-python run.py +algorithm=ac_new_idea env.name="lbforaging:Foraging-8x8-2p-3f-v3" env.time_limit=25
-```
-You can now add new hyperparameters, change the training procedure, or anything else you want and keep the old implementations for easy comparison. We hope that the way we have implemented these algorithms makes it easy to change any part of the algorithm without the hustle of reading through large code-bases and huge unnecessary layers of abstraction. RL research benefits from iterating over ideas quickly to see how they perform!
-
-# Interpreting your results
-
-We have multiple tools to analyze the outputs of FileSystemLogger (for WandBLogger, just login to their webpage).
-
-You can easily find the best hyperparameter configuration per environment using: 
-```sh
-python utils/postprocessing/find_best_hyperparams.py  --source <PATH/TO/SOURCE/DIR>
-```
-By default, this script will determine the best hyperparameters based on the average total returns across all evaluations and seeds. To use a different metric, you can specify the desired metric (from the `results.csv` files) with the `--metric` argument.
-
-Similarly, you can plot the stored runs (average/std across seeds) using:
-```sh
-python utils/postprocessing/plot_runs.py --source <PATH/TO/SOURCE/DIR>
-```
-By default, this will visualise the mean and std across seeds of the `mean_episode_returns` metric. You can specify the metric to plot using the `--metric` argument. You can also provide the additional `--save_path` argument to save the plot as a `.pdf` file.
-
-We also provide a script to export the data of multiple runs as a pandas dataframe using:
-```sh
-python utils/postprocessing/export_multirun.py --folder folder/containing/results --export-file myfile.hd5
-```
-The file will contain two pandas DataFrames: `df` which contains all `mean_episode_returns` (by default summed across all agents), and `config` which contains information about the tested hyperparameters.  
-You can load both through Python using:
-```python
-import pandas as pd
-df = pd.read_hdf("myfile.hd5", "df")
-configs = pd.read_hdf("myfile.hd5", "configs")
-```
-The imported DataFrames look like the ones below. `df` has a multi-index column indexing the environment name, the algorithm name, a hash unique to the parameter search, and a seed. `configs` maps the hash to the full configuration of the run.
-
-```ipython
-In [1]: df
-Out[2]: 
-                       Foraging-20x20-9p-6f-v3             ...                       
-                                       Algo1               ...     Algo2             
-                                   f7c2ecb3ddf1            ... 5284ad99ce02          
-                                         seed=0    seed=1  ...       seed=0    seed=1
-environment_steps                                          ...                       
-0                                      0.178373  0.000000  ...     0.089167  0.054286
-100000                                 0.026786  0.066667  ...     0.054545  0.033333
-200000                                 0.130278  0.084650  ...     0.043333  0.055833
-300000                                 0.086111  0.109975  ...     0.182626  0.116768
-...
-
-In [3]: configs
-Out[4]: 
-             algorithm.name  algorithm.lr  algorithm.batch_size
-f7c2ecb3ddf1       DQN-FuPS        0.0001                   256
-ecaf120f572e       DQN-SePS        0.0001                   128
-5a80fe220cfc       DQN-SePS        0.0003                   128
-d16939a558b6       DQN-FuPS        0.0003                   256
-...
-```
-
-Finally you can use [HiPlot](https://github.com/facebookresearch/hiplot) to interactively visualize the performance of various hyperparameter configurations using:
-```sh
-pip install -U hiplot
-hiplot marlbase.utils.postprocessing.hiplot_fetcher.experiment_fetcher
-```
-You will have to enter `exp://myfile.hd5/env_name/alg_name` in the browser's textbox.
-
-
-
-## Parameter Sharing
-
-Parameter sharing across agents is optional and being done behind the scenes in the torch model.
-There are three types of parameter sharing:
-- No Parameter Sharing (default)
-- Full Parameter Sharing
-- Selective Parameter Sharing ([Christianos et al.](https://arxiv.org/pdf/2102.07475.pdf))
-
-For example, for IDQN you can enable either of these using:
-```sh
-python run.py +algorithm=dqn env.name="lbforaging:Foraging-8x8-4p-3f-v3" env.time_limit=25 algorithm.model.parameter_sharing=False
-python run.py +algorithm=dqn env.name="lbforaging:Foraging-8x8-4p-3f-v3" env.time_limit=25 algorithm.model.parameter_sharing=True
-python run.py +algorithm=dqn env.name="lbforaging:Foraging-8x8-4p-3f-v3" env.time_limit=25 "algorithm.model.parameter_sharing=[0,0,1,1]"
-```
-for each of the methods respectively. For Selective Parameter Sharing, you need to supply a list of indices pointing to the network that is going to be used for each agent. Example: `[0,0,1,1]` as above makes the agents `0` and `1` share network `0` and agents `2` and `3` share the network `1`. Similarly `[0,1,1,1]` would make the first agent not share parameters with anyone, and the other three would share parameters.
-
-In actor-critic methods you would need to separately define parameter sharing for the actor and the critic. The respective config is `algorithm.model.actor.parameter_sharing=...` and `algorithm.model.critic.parameter_sharing=...`
-
-## Value Decomposition
-
-We have implemented VDN and QMIX on top of the DQN algorithm. To use load the respective algorithm config with:
-
-```sh
-python run.py +algorithm=vdn env.name="lbforaging:Foraging-8x8-4p-3f-v3" env.time_limit=25
-```
-
-Note that for this to work we use the `CooperativeReward` wrapper that _sums_ the rewards of all agents before feeding them to the training algorithm. If you have an environment that already has a cooperative reward, you still need it to return a *list of rewards* (e.g. `reward = n_agents * [reward/n_agents]`).
-
-## Our Modifications
-
-Current command line command with visual output
-
-<pre><code>
-	HYDRA_FULL_ERROR=1 python run.py +algorithm=mappo env.name="lbforaging:Foraging-10x10-3p-4f-v3" env.time_limit=25 algorithm.save_interval=10000 algorithm.video_interval=10000 algorithm.video_frames=400 +save_interval=10000 +video_frames=400 +video_interval=10000
-</pre></code>
-
-With FOV(sight) defined
-
-<pre><code>
-HYDRA_FULL_ERROR=1 python run.py +algorithm=mappo env.name="lbforaging:Foraging-10x10-3p-4f-v3" env.time_limit=25 +env.sight=3 algorithm.save_interval=10000 algorithm.video_interval=10000 algorithm.video_frames=400 +save_interval=10000 +video_frames=400 +video_interval=10000
-</pre></code>
-
-Training with obstacle cells (Note this require to modify the original rendering.py file of original lbforaging library)
-
-<pre><code>
-HYDRA_FULL_ERROR=1 python run.py +algorithm=mappo env.name="lbforaging:Foraging-10x10-3p-4f-v3" env.time_limit=75 +env.sight=3 +env.num_obstacles=10 algorithm.save_interval=10000 algorithm.video_interval=10000 algorithm.video_frames=400 +save_interval=10000 +video_frames=400 +video_interval=10000
-</pre></code>
-
-Evaluation
-
-<pre><code>
-	python eval.py path=outputs/lbforaging:Foraging-10x10-3p-4f-v3/mappo/<run_id>
-</pre></code>
-
-<pre><code>
-	python eval.py path=outputs/lbforaging:Foraging-10x10-3p-4f-v3/mappo/<run_id> load_step=10000
-</pre></code>
-
-Post processing scripts
-
-<pre><code>
-	python utils/postprocessing/plot_runs.py --source outputs/lbforaging:Foraging-10x10-3p-4f-v3/mappo
-</pre></code>
-
-Find best hyperparams. This will filter the best training out of all trainings.
-
-<pre><code>
-	python utils/postprocessing/find_best_hyperparams.py --source outputs/lbforaging:Foraging-10x10-3p-4f-v3/mappo
-</pre></code>
-
-File path to modify lbforaging
-<pre><code>
-	~/miniconda3/envs/marlbase/lib/python3.10/site-packages/lbforaging/foraging
-</pre></code>
-
-Modifications for the lbforgaing rendering.py file. Add the follwing method to the script
-```sh
-    #modification added to draw obstacles
-    def _draw_obstacles(self, env):
-        if not hasattr(env, "obstacles"):
-            return  # nothing to draw
-
-        batch = pyglet.graphics.Batch()
-        sprites = []  # keep references alive!
-
-        for (row, col) in env.obstacles:
-            x = (self.grid_size + 1) * col
-            y = self.height - (self.grid_size + 1) * (row + 1)
-
-            if self.img_rock:  # just check directly
-                sprite = pyglet.sprite.Sprite(self.img_rock, x=x, y=y, batch=batch)
-                sprite.update(
-                    scale_x=self.grid_size / self.img_rock.width,
-                    scale_y=self.grid_size / self.img_rock.height
-                )
-                sprites.append(sprite)
-            else:
-                square = pyglet.shapes.Rectangle(
-                    x, y, self.grid_size, self.grid_size,
-                    color=(200, 0, 0), batch=batch
-                )
-                sprites.append(square)
-
-        batch.draw()
-        self._obstacle_sprites = sprites
-```
-
-Put a rock.png to icons folder
-<pre><code>
-~/miniconda3/envs/marlbase/lib/python3.10/site-packages/lbforaging/foraging/icons
-</pre></code>
-
-Modify the constructo to load the png
-<pre><code>
-	self.img_apple = pyglet.resource.image("apple.png")
-        self.img_agent = pyglet.resource.image("agent.png")
-        self.img_rock = pyglet.resource.image("rock.png")  #modification added to load rock image
-</pre></code>
-
-Then call the above method inside the render(self, env, return_rgb_array=False): method
-<pre><code>
-def render(self, env, return_rgb_array=False):
-        glClearColor(*_WHITE, 0)
-        self.window.clear()
-        self.window.switch_to()
-        self.window.dispatch_events()
-
-        self._draw_grid()
-        self._draw_food(env)
-        self._draw_players(env)
-        self._draw_obstacles(env)  #modification added to draw obstacle
-</pre></code>
-
-
-
-Based on: https://github.com/semitable/fast-marl (by Filippos Christianos)
+  </code></pre>
+
+  <p>
+    Install PyTorch for your system
+    (see <a href="https://pytorch.org/get-started/locally/" target="_blank" rel="noopener noreferrer">https://pytorch.org/get-started/locally/</a>).
+  </p>
+
+  <p>Install the environments used in this project:</p>
+
+  <pre><code>pip install -U lbforaging rware
+  </code></pre>
+
+  <p>
+    All algorithms are implemented in <strong>PyTorch</strong> and use the <strong>Gymnasium</strong> API
+    (with one reward per agent).
+  </p>
+
+  <hr />
+
+  <h2>2. Running MAPPO on Level-Based Foraging</h2>
+
+  <p>All commands below are run from inside the <code>marlbase</code> directory:</p>
+
+  <pre><code>cd marlbase
+  </code></pre>
+
+  <h3>2.1 Base MAPPO Training (with video)</h3>
+
+  <p>Example command:</p>
+
+  <pre><code>HYDRA_FULL_ERROR=1 \
+python run.py +algorithm=mappo \
+    env.name="lbforaging:Foraging-10x10-3p-4f-v3" \
+    env.time_limit=25 \
+    algorithm.save_interval=10000 \
+    algorithm.video_interval=10000 \
+    algorithm.video_frames=400 \
+    +save_interval=10000 \
+    +video_frames=400 \
+    +video_interval=10000
+  </code></pre>
+
+  <p>This will create an output directory like:</p>
+
+  <pre><code>outputs/lbforaging:Foraging-10x10-3p-4f-v3/mappo/&lt;run_id&gt;/
+    config.yaml
+    results.csv
+    checkpoints/model_sXXXXXX.pt
+    ...
+  </code></pre>
+
+  <h3>2.2 Training with FOV (sight) Control</h3>
 
+  <p>To change the <strong>field of view</strong> of each agent (e.g., <code>sight=3</code>):</p>
+
+  <pre><code>HYDRA_FULL_ERROR=1 \
+python run.py +algorithm=mappo \
+    env.name="lbforaging:Foraging-10x10-3p-4f-v3" \
+    env.time_limit=25 \
+    +env.sight=3 \
+    algorithm.save_interval=10000 \
+    algorithm.video_interval=10000 \
+    algorithm.video_frames=400 \
+    +save_interval=10000 \
+    +video_frames=400 \
+    +video_interval=10000
+  </code></pre>
+
+  <p>You can repeat with <code>+env.sight=2</code> and <code>+env.sight=3</code> to compare FOV settings.</p>
+
+  <h3>2.3 Training with Obstacle Cells</h3>
+
+  <p>
+    We add obstacles to the LBF grid via the <code>num_obstacles</code> parameter (and a small rendering modification,
+    see Section 5).
+  </p>
+
+  <p>Example: <strong>10 obstacles, FOV = 3, longer time limit</strong>:</p>
+
+  <pre><code>HYDRA_FULL_ERROR=1 \
+python run.py +algorithm=mappo \
+    env.name="lbforaging:Foraging-10x10-3p-4f-v3" \
+    env.time_limit=75 \
+    +env.sight=3 \
+    +env.num_obstacles=10 \
+    algorithm.save_interval=10000 \
+    algorithm.video_interval=10000 \
+    algorithm.video_frames=400 \
+    +save_interval=10000 \
+    +video_frames=400 \
+    +video_interval=10000
+  </code></pre>
+
+  <h3>2.4 Player Level Configurations (Capability)</h3>
+
+  <p>
+    Player capability can be controlled via <code>min_player_level</code> and <code>max_player_level</code> in the environment config.
+    For example:
+  </p>
+
+  <ul>
+    <li>
+      All agents level 1:
+      <pre><code>... +env.min_player_level=1 +env.max_player_level=1
+      </code></pre>
+    </li>
+    <li>
+      Levels in [1, 3]:
+      <pre><code>... +env.min_player_level=1 +env.max_player_level=3
+      </code></pre>
+    </li>
+  </ul>
+
+  <p>
+    You can create separate runs for different <code>max_player_level</code> values and compare performance and cooperation behavior.
+  </p>
+
+  <hr />
+
+  <h2>3. Evaluation</h2>
+
+  <p>To evaluate a trained run using the MARL-book eval script:</p>
+
+  <pre><code>python eval.py path=outputs/lbforaging:Foraging-10x10-3p-4f-v3/mappo/&lt;run_id&gt;
+  </code></pre>
+
+  <p>To evaluate a <strong>specific checkpoint</strong> (e.g., at 10,000 steps):</p>
+
+  <pre><code>python eval.py \
+    path=outputs/lbforaging:Foraging-10x10-3p-4f-v3/mappo/&lt;run_id&gt; \
+    load_step=10000
+  </code></pre>
+
+  <p>
+    The number of evaluation episodes and other eval settings are controlled by the algorithm’s eval config (Hydra),
+    not hard-coded in this script.
+  </p>
+
+  <hr />
+
+  <h2>4. Logging and Post-Processing</h2>
+
+  <p>
+    By default, the <strong>File System Logger</strong> writes training results to:
+  </p>
+
+  <pre><code>outputs/{env_name}/{alg_name}/{run_id}/results.csv
+  </code></pre>
+
+  <p>The main metrics used in this project are:</p>
+
+  <ul>
+    <li><code>environment_steps</code></li>
+    <li><code>mean_episode_returns</code></li>
+    <li><code>agent0/mean_episode_returns</code>, <code>agent1/…</code>, <code>agent2/…</code></li>
+    <li><code>mean_episode_length</code>, <code>std_episode_returns</code>, etc.</li>
+  </ul>
+
+  <p>These are used to create:</p>
+
+  <ul>
+    <li>Learning curves (mean return vs. environment steps)</li>
+    <li>Cooperation metrics (e.g., std. dev. of agent returns)</li>
+  </ul>
+
+  <h3>4.1 Plotting Runs</h3>
+
+  <p>You can use the built-in plotting script:</p>
+
+  <pre><code>python utils/postprocessing/plot_runs.py \
+    --source outputs/lbforaging:Foraging-10x10-3p-4f-v3/mappo
+  </code></pre>
+
+  <p>
+    By default, this plots <code>mean_episode_returns</code> across runs/seeds.
+  </p>
+
+  <h3>4.2 Finding Best Hyperparameters / Best Runs</h3>
+
+  <p>To automatically identify the best runs by a metric (default: average total returns):</p>
+
+  <pre><code>python utils/postprocessing/find_best_hyperparams.py \
+    --source outputs/lbforaging:Foraging-10x10-3p-4f-v3/mappo
+  </code></pre>
+
+  <hr />
+
+  <h2>5. Obstacle Rendering Modifications in <code>lbforaging</code></h2>
+
+  <p>To <strong>visualize obstacles</strong> in Level-Based Foraging, we modify the <code>rendering.py</code> file in the <code>lbforaging</code> package.</p>
+
+  <h3>5.1 File Location</h3>
+
+  <pre><code>~/miniconda3/envs/marlbase/lib/python3.10/site-packages/lbforaging/foraging/rendering.py
+  </code></pre>
+
+  <h3>5.2 Add Obstacle Drawing Function</h3>
+
+  <p>Add this method inside the renderer class:</p>
+
+  <pre><code># modification added to draw obstacles
+def _draw_obstacles(self, env):
+    if not hasattr(env, "obstacles"):
+        return  # nothing to draw
+
+    batch = pyglet.graphics.Batch()
+    sprites = []  # keep references alive!
+
+    for (row, col) in env.obstacles:
+        x = (self.grid_size + 1) * col
+        y = self.height - (self.grid_size + 1) * (row + 1)
+
+        if self.img_rock:  # just check directly
+            sprite = pyglet.sprite.Sprite(self.img_rock, x=x, y=y, batch=batch)
+            sprite.update(
+                scale_x=self.grid_size / self.img_rock.width,
+                scale_y=self.grid_size / self.img_rock.height
+            )
+            sprites.append(sprite)
+        else:
+            square = pyglet.shapes.Rectangle(
+                x, y, self.grid_size, self.grid_size,
+                color=(200, 0, 0), batch=batch
+            )
+            sprites.append(square)
+
+    batch.draw()
+    self._obstacle_sprites = sprites
+  </code></pre>
+
+  <h3>5.3 Add <code>rock.png</code> Icon</h3>
+
+  <p>Place a <code>rock.png</code> file in:</p>
+
+  <pre><code>~/miniconda3/envs/marlbase/lib/python3.10/site-packages/lbforaging/foraging/icons
+  </code></pre>
+
+  <p>Then in the renderer’s constructor, load the rock image:</p>
+
+  <pre><code>self.img_apple = pyglet.resource.image("apple.png")
+self.img_agent = pyglet.resource.image("agent.png")
+self.img_rock  = pyglet.resource.image("rock.png")  # modification
+  </code></pre>
+
+  <h3>5.4 Call Obstacle Draw Function in <code>render</code></h3>
+
+  <p>Inside <code>render(self, env, return_rgb_array=False):</code>, add:</p>
+
+  <pre><code>def render(self, env, return_rgb_array=False):
+    glClearColor(*_WHITE, 0)
+    self.window.clear()
+    self.window.switch_to()
+    self.window.dispatch_events()
+
+    self._draw_grid()
+    self._draw_food(env)
+    self._draw_players(env)
+    self._draw_obstacles(env)  # modification added to draw obstacles
+  </code></pre>
+
+  <hr />
+
+  <h2>6. Notes</h2>
+
+  <ul>
+    <li>
+      This project uses <strong>MAPPO</strong> from the MARL-book codebase with minor environment
+      extensions (FOV, obstacles, player-level variations).
+    </li>
+    <li>
+      All changes are kept minimal to preserve the simplicity of the original implementations.
+    </li>
+    <li>
+      The work is based on and compatible with the main MARL-book codebase:
+      <ul>
+        <li><a href="https://github.com/marl-book/codebase" target="_blank" rel="noopener noreferrer">https://github.com/marl-book/codebase</a></li>
+        <li>Based in part on: <a href="https://github.com/semitable/fast-marl" target="_blank" rel="noopener noreferrer">https://github.com/semitable/fast-marl</a> (by Filippos Christianos)</li>
+      </ul>
+    </li>
+  </ul>
+
+</body>
+</html>
