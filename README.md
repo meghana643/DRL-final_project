@@ -275,7 +275,7 @@ python run.py +algorithm=vdn env.name="lbforaging:Foraging-8x8-4p-3f-v3" env.tim
 
 Note that for this to work we use the `CooperativeReward` wrapper that _sums_ the rewards of all agents before feeding them to the training algorithm. If you have an environment that already has a cooperative reward, you still need it to return a *list of rewards* (e.g. `reward = n_agents * [reward/n_agents]`).
 
-## Update (Sanjaya)
+## Our Modifications
 
 Current command line command with visual output
 
