@@ -327,7 +327,6 @@ self.img_rock  = pyglet.resource.image("rock.png")  # modification
       This project uses <strong>MAPPO</strong> from the MARL-book codebase with minor environment
       extensions (FOV, obstacles, player-level variations).
     </li>
-  
     <li>
       The work is based on and compatible with the main MARL-book codebase:
       <ul>
