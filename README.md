@@ -236,16 +236,6 @@ hiplot marlbase.utils.postprocessing.hiplot_fetcher.experiment_fetcher
 You will have to enter `exp://myfile.hd5/env_name/alg_name` in the browser's textbox.
 
 
-# Implemented Algorithms
-
-|                             | IA2C                | MA-A2C             | IPPO               | MA-PPO             | DQN (Double Q)     | VDN                 | QMIX                |
-|-----------------------------|---------------------|--------------------|--------------------|-------------------|--------------------|---------------------|---------------------|
-| Parameter Sharing           | :heavy_check_mark:  | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  | :heavy_check_mark:  | 
-| Selective Parameter Sharing | :heavy_check_mark:  | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  | :heavy_check_mark:  | 
-| Return Standardisation      | :heavy_check_mark:  | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  | :heavy_check_mark:  | 
-| Reward Standardisation      | :heavy_check_mark:  | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  | :heavy_check_mark:  | 
-| Target Networks             | :heavy_check_mark:  | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark: | :heavy_check_mark:  | :heavy_check_mark:  | 
-
 
 ## Parameter Sharing
 
@@ -275,7 +265,7 @@ python run.py +algorithm=vdn env.name="lbforaging:Foraging-8x8-4p-3f-v3" env.tim
 
 Note that for this to work we use the `CooperativeReward` wrapper that _sums_ the rewards of all agents before feeding them to the training algorithm. If you have an environment that already has a cooperative reward, you still need it to return a *list of rewards* (e.g. `reward = n_agents * [reward/n_agents]`).
 
-## Update (Sanjaya)
+## Our Modifications
 
 Current command line command with visual output
 
@@ -381,9 +371,6 @@ def render(self, env, return_rgb_array=False):
 </pre></code>
 
 
-# Contact
-- Filippos Christianos - filippos {dot} christianos {at} gmail {dot} com
-- Lukas Schäfer - luki {dot} schaefer96 {at} gmail {dot} com
 
 Based on: https://github.com/semitable/fast-marl (by Filippos Christianos)
 
